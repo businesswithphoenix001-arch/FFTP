@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TFFT - Admin & User Profile</title>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-auth-compat.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #121212; color: white; margin: 0; padding: 20px; }
+        .container { max-width: 500px; margin: auto; background: #1e1e1e; padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        h2 { text-align: center; color: #ff4500; }
+        input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: none; background: #333; color: white; box-sizing: border-box; }
+        .btn { width: 100%; padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px; margin-top: 10px; }
+        .btn-google { background: #db4437; color: white; }
+        .btn-save { background: #ff4500; color: white; }
+        .hidden { display: none; }
+        .profile-data { background: #2a2a2a; padding: 15px; border-radius: 10px; margin-top: 15px; }
+        .status-tag { float: right; font-size: 12px; padding: 4px 8px; border-radius: 5px; background: #444; }
+    </style>
+</head>
+<body>
+
+<div id="login-section" class="container">
+    <h2>TFFT Tournament</h2>
+    <p style="text-align: center;">Login karke shuru karein</p>
+    <button onclick="login()" class="btn btn-google">Login with Google</button>
+</div>
+
+<div id="profile-setup" class="container hidden">
+    <h2>Complete Profile</h2>
+    <p>Tournament join karne ke liye details bharein</p>
+    <input type="text" id="ff-name" placeholder="Free Fire Name">
+    <input type="text" id="ff-uid" placeholder="Free Fire UID (Number)">
+    <button onclick="saveProfile()" class="btn btn-save">Save & Continue</button>
+</div>
+
+<div id="main-dashboard" class="container hidden">
+    <h2 id="welcome-text">Welcome</h2>
+    <div id="user-info" class="profile-data">
+        <b>FF Name:</b> <span id="display-ff-name">--</span> <br>
+        <b>FF UID:</b> <span id="display-ff-uid">--</span>
+        <button onclick="editProfile()" style="font-size: 10px; margin-top: 5px;">Edit Profile</button>
+    </div>
+
+    <div id="admin-controls" class="hidden">
+        <hr style="border: 0.5px solid #444; margin: 20px 0;">
+        <h3 style="color: yellow;">Admin Panel Active</h3>
+        <p>Aap yahan se requests manage kar sakte hain.</p>
+        </div>
+</div>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyA5q_KdE8arYC85ki91vHoBE7a1E4_a04E",
+        authDomain: "tfft-e6127.firebaseapp.com",
+        databaseURL: "https://tfft-e6127-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "tfft-e6127",
+        storageBucket: "tfft-e6127.firebasestorage.app",
+        messagingSenderId: "733798912828",
+        appId: "1:733798912828:web:6cd69241358401fabbc439"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const auth = firebase.auth();
+
+    // LOGIN FUNCTION
+    function login() {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        auth.signInWithPopup(provider).catch(err => alert("Error: " + err.message));
+    }
+
+    // CHECK AUTH STATUS
+    auth.onAuthStateChanged(user => {
+        if (user) {
+            document.getElementById('login-section').classList.add('hidden');
+            checkUserProfile(user);
+        } else {
+            document.getElementById('login-section').classList.remove('hidden');
+            document.getElementById('main-dashboard').classList.add('hidden');
+            document.getElementById('profile-setup').classList.add('hidden');
+        }
+    });
+
+    // CHECK IF PROFILE EXISTS
+    function checkUserProfile(user) {
+        db.ref('users/' + user.uid).once('value').then(snapshot => {
+            const data = snapshot.val();
+            if (data && data.ffName && data.ffUid) {
+                showDashboard(user, data);
+            } else {
+                document.getElementById('profile-setup').classList.remove('hidden');
+            }
+        });
+    }
+
+    // SAVE PROFILE DATA
+    function saveProfile() {
+        const name = document.getElementById('ff-name').value;
+        const uid = document.getElementById('ff-uid').value;
+        const user = auth.currentUser;
+
+        if (name && uid) {
+            db.ref('users/' + user.uid).update({
+                ffName: name,
+                ffUid: uid,
+                email: user.email,
+                wallet_balance: 0
+            }).then(() => {
+                alert("Profile Saved!");
+                location.reload();
+            });
+        } else {
+            alert("Sari details bharein!");
+        }
+    }
+
+    // SHOW DASHBOARD
+    function showDashboard(user, data) {
+        document.getElementById('main-dashboard').classList.remove('hidden');
+        document.getElementById('welcome-text').innerText = "Hello, " + user.displayName;
+        document.getElementById('display-ff-name').innerText = data.ffName;
+        document.getElementById('display-ff-uid').innerText = data.ffUid;
+
+        // ADMIN CHECK
+        if (user.email === "ffskg86@gmail.com") {
+            document.getElementById('admin-controls').classList.remove('hidden');
+        }
+    }
+
+    function editProfile() {
+        document.getElementById('main-dashboard').classList.add('hidden');
+        document.getElementById('profile-setup').classList.remove('hidden');
+    }
+</script>
+</body>
+</html>
